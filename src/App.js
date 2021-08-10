@@ -1,103 +1,86 @@
-import { Component } from "react";
-import Searchbar from "./Components/Searchbar";
-import LoaderSpinner from "./Components/Loader";
-import ImageGallery from "./Components/ImageGallery";
-import Button from "./Components/Button";
-import Modal from "./Components/Modal/";
-import apiImages from "./serveces/apiImages";
+import { useState, useEffect } from "react";
+import Searchbar from "./components/Searchbar";
+import LoaderSpinner from "./components/Loader";
+import ImageGallery from "./components/ImageGallery";
+import Button from "./components/Button";
+import Modal from "./components/Modal/";
+import apiImages from "./services/apiImages";
 
 import s from "./App.module.css";
 
-class App extends Component {
-  state = {
-    searchQuery: "",
-    page: 1,
-    images: [],
-    loading: false,
-    showButtom: false,
-    showModal: false,
-    imageModal: "",
-    error: null,
-  };
+export default function App() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showButton, setShowButton] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [imageModal, setImageModal] = useState("");
+  const [error, setError] = useState(null);
 
-  componentDidUpdate(prevProps, prevState) {
-    // console.log(prevState);
-    // console.log(this.state);
-    const { searchQuery } = this.state;
-
-    if (searchQuery !== prevState.searchQuery) {
-      this.getImages();
-    }
-  }
-
-  getImages = () => {
-    const { searchQuery, page } = this.state;
-    this.setState({ loading: true });
-    setTimeout(() => {
+  useEffect(() => {
+    const getImages = () => {
+      setLoading(true);
+      setShowButton(false);
       apiImages
         .fetchImages(searchQuery, page)
         .then(({ hits }) => {
-          // console.log(hits);
-
           if (hits.length === 0) {
-            this.setState({
-              error: "Sorry, search returned no results. Enter correct query.",
-            });
+            setError("Sorry, search returned no results. Enter correct query.");
           }
 
-          if (hits.length !== 12) {
-            this.setState({ showButtom: false });
-          } else {
-            this.setState({ showButtom: true });
+          if (hits.length === 12) {
+            setShowButton(true);
           }
 
-          this.setState((prevState) => ({
-            images: [...prevState.images, ...hits],
-            page: prevState.page + 1,
-          }));
-          this.smoothScroll();
+          setImages((prevImages) => [...prevImages, ...hits]);
+          smoothScroll();
         })
-        .catch((error) => this.setState({ error }))
-        .finally(() => this.setState({ loading: false }));
-    }, 1000);
-  };
+        .catch((error) => setError(error))
+        .finally(() => setLoading(false));
+    };
+    if (!searchQuery) {
+      return;
+    }
+    getImages();
+  }, [page, searchQuery]);
 
-  smoothScroll = () => {
+  function handleSubmit(searchQuery) {
+    setSearchQuery(searchQuery);
+    setImages([]);
+    setPage(1);
+    setError("");
+    setShowButton(false);
+  }
+
+  function incrementPage() {
+    setPage((prevPage) => prevPage + 1);
+  }
+
+  function toggelModal() {
+    setShowModal((prevState) => !prevState);
+  }
+
+  function handlerOnImageClick(event) {
+    setImageModal(event);
+    toggelModal();
+  }
+
+  const smoothScroll = () => {
     window.scrollTo({
       top: document.documentElement.scrollHeight,
       behavior: "smooth",
     });
   };
 
-  hendleSubmit = (searchQuery) => {
-    this.setState({ searchQuery, images: [], page: 1, error: "" });
-  };
-
-  toggelModal = () => {
-    this.setState(({ showModal }) => ({ showModal: !showModal }));
-  };
-
-  hendleOnImageClick = (event) => {
-    this.setState({ imageModal: event });
-    this.toggelModal();
-  };
-
-  render() {
-    const { images, loading, showButtom, showModal, imageModal, error } =
-      this.state;
-    return (
-      <div className={s.container}>
-        <Searchbar onSubmit={this.hendleSubmit} />
-        {loading && <LoaderSpinner />}
-        {error && <p>{error}</p>}
-        <ImageGallery images={images} onClick={this.hendleOnImageClick} />
-        {showButtom && <Button onLoadMore={this.getImages} />}
-        {showModal && (
-          <Modal imageModal={imageModal} onClose={this.toggelModal} />
-        )}
-      </div>
-    );
-  }
+  return (
+    <div className={s.container}>
+      <Searchbar onSubmit={handleSubmit} />
+      {loading && <LoaderSpinner />}
+      {error && <p>{error}</p>}
+      <ImageGallery images={images} onClick={handlerOnImageClick} />
+      {showButton && <Button onLoadMore={incrementPage} />}
+      {showModal && <Modal imageModal={imageModal} onClose={toggelModal} />}
+    </div>
+  );
 }
-
-export default App;
