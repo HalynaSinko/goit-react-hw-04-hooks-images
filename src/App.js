@@ -24,12 +24,12 @@ export default function App() {
       setShowButton(false);
       apiImages
         .fetchImages(searchQuery, page)
-        .then(({ hits }) => {
+        .then(({ hits, total }) => {
           if (hits.length === 0) {
             setError("Sorry, search returned no results. Enter correct query.");
           }
 
-          if (hits.length === 12) {
+          if (hits.length === 12 && total - 12 * page > 0) {
             setShowButton(true);
           }
 
